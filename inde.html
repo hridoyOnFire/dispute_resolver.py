@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GenLayer AI Dispute Resolver</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #0d1117; color: #c9d1d9; font-family: system-ui, sans-serif; }
+        .card { background-color: #161b22; border: 1px solid #30363d; color: #c9d1d9; }
+        .btn-primary { background-color: #238636; border: none; }
+        .btn-primary:hover { background-color: #2ea043; }
+    </style>
+</head>
+<body class="container py-5">
+    <h2 class="text-center text-success mb-4">GenLayer Dispute Resolution Portal</h2>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card p-4">
+                <h4>Submit Dispute</h4>
+                <div class="mb-3">
+                    <label>Claimant Address</label>
+                    <input type="text" id="claimant" class="form-control bg-dark text-white border-secondary" placeholder="0x123...">
+                </div>
+                <div class="mb-3">
+                    <label>Respondent Address</label>
+                    <input type="text" id="respondent" class="form-control bg-dark text-white border-secondary" placeholder="0x456...">
+                </div>
+                <div class="mb-3">
+                    <label>Evidence / Dispute Details</label>
+                    <textarea id="details" class="form-control bg-dark text-white border-secondary" rows="3"></textarea>
+                </div>
+                <button onclick="submitDispute()" class="btn btn-primary w-100">Submit to GenLayer Contract</button>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card p-4">
+                <h4>AI Evaluation Status</h4>
+                <div id="disputeOutput" class="mt-3">
+                    <p class="text-muted">No dispute submitted yet.</p>
+                </div>
+                <button id="resolveBtn" onclick="resolveDispute()" class="btn btn-warning w-100 mt-3 d-none">Execute GenLayer Consensus</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDisputeId = null;
+
+        async function submitDispute() {
+            const claimant = document.getElementById('claimant').value;
+            const respondent = document.getElementById('respondent').value;
+            const details = document.getElementById('details').value;
+
+            const res = await fetch('/api/dispute/create', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({claimant, respondent, details})
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                currentDisputeId = data.dispute.id;
+                document.getElementById('disputeOutput').innerHTML = `
+                    <p><strong>Dispute ID:</strong> #${data.dispute.id}</p>
+                    <p><strong>Status:</strong> <span class="badge bg-secondary">${data.dispute.status}</span></p>
+                    <p><strong>Details:</strong> ${data.dispute.details}</p>
+                `;
+                document.getElementById('resolveBtn').classList.remove('d-none');
+            }
+        }
+
+        async function resolveDispute() {
+            if(!currentDisputeId) return;
+            const res = await fetch(`/api/dispute/resolve/${currentDisputeId}`, { method: 'POST' });
+            const data = await res.json();
+            
+            if(data.success) {
+                document.getElementById('disputeOutput').innerHTML += `
+                    <div class="alert alert-success mt-3">
+                        <strong>Result:</strong> ${data.dispute.verdict}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
